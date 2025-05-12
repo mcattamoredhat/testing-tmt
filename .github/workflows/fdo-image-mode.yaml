@@ -54,6 +54,7 @@
            git_url: ${{ needs.check-pull-request.outputs.repo_url }}
            git_ref: ${{ needs.check-pull-request.outputs.ref }}
            tmt_context: "arch=x86_64;distro=rhel-10-0"
+           tmt_path: "./test/fmf"
            tmt_plan_regex: fdo-bootc
            tf_scope: private
            variables: "ARCH=x86_64"
