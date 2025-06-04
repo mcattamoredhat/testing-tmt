@@ -13,7 +13,7 @@ TEMPDIR=$(mktemp -d)
 
 # SSH setup.
 SSH_OPTIONS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
-SSH_KEY=rhel-edge/key/ostree_key
+SSH_KEY=key/ostree_key
 EDGE_USER_PASSWORD=foobar
 
 function clean_up {
@@ -83,17 +83,18 @@ sudo dnf install -y \
     libvirt-daemon \
     virt-install
 
-# Clone upstream repo and build fdo packages
-git clone https://github.com/fdo-rs/fido-device-onboard-rs.git && cd fido-device-onboard-rs
+echo "Build fdo packages"
+cd /tmp/"${REPO_NAME}"
+pwd
+ls -lsa
 make rpm
 sudo dnf -y install rpmbuild/RPMS/x86_64/*
-cd ..
+cd -
+mkdir -pv packages
+sudo cp /tmp/"${REPO_NAME}"/rpmbuild/RPMS/x86_64/* ./packages
 
 # Manufacturing server setup (needs fdo packages installed)
-# Clone downstream repo custom branch (fdo simplified installer setup skipping disk encryption)
-git clone -b fdo-man-server-infra https://github.com/mcattamoredhat/rhel-edge.git && cd rhel-edge
-DOWNLOAD_NODE="${DOWNLOAD_NODE}" ./ostree-simplified-installer.sh
-cd ..
+DOWNLOAD_NODE="${DOWNLOAD_NODE}" ./setup-manufacturing-server.sh
 
 # Login to Stage registry
 sudo podman login -u "${STAGE_REDHAT_IO_USERNAME}" -p "${STAGE_REDHAT_IO_TOKEN}" registry.stage.redhat.io
@@ -107,7 +108,7 @@ FROM registry.stage.redhat.io/rhel10/rhel-bootc:10.0
 RUN echo 'root' | passwd --stdin root
 
 # Copy the local RPM files into the container
-COPY fido-device-onboard-rs/rpmbuild/RPMS/x86_64/* /tmp/
+COPY ./packages/* /tmp/
 
 # Install packages
 RUN dnf install -y \
@@ -135,7 +136,7 @@ sudo podman push rhel10-bootc --creds="${QUAY_USERNAME}":"${QUAY_PASSWORD}" quay
 mkdir -pv output
 
 # Create config.toml with kickstart information
-tee config.toml > /dev/null << STOPHERE
+tee config.toml << STOPHERE
 [customizations.installer.kickstart]
 contents = """
 text
@@ -144,8 +145,8 @@ keyboard us
 timezone --utc Etc/UTC
 selinux --enforcing
 rootpw --plaintext root
-user --name=admin --groups=wheel --iscrypted --password=\$6\$1LgwKw9aOoAi/Zy9\$Pn3ErY1E8/yEanJ98evqKEW.DZp24HTuqXPJl6GYCm8uuobAmwxLv7rGCvTRZhxtcYdmC0.XnYRSR9Sh6de3p0
-sshkey --username=admin "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCzxo5dEcS+LDK/OFAfHo6740EyoDM8aYaCkBala0FnWfMMTOq7PQe04ahB0eFLS3IlQtK5bpgzxBdFGVqF6uT5z4hhaPjQec0G3+BD5Pxo6V+SxShKZo+ZNGU3HVrF9p2V7QH0YFQj5B8F6AicA3fYh2BVUFECTPuMpy5A52ufWu0r4xOFmbU7SIhRQRAQz2u4yjXqBsrpYptAvyzzoN4gjUhNnwOHSPsvFpWoBFkWmqn0ytgHg3Vv9DlHW+45P02QH1UFedXR2MqLnwRI30qqtaOkVS+9rE/dhnR+XPpHHG+hv2TgMDAuQ3IK7Ab5m/yCbN73cxFifH4LST0vVG3Jx45xn+GTeHHhfkAfBSCtya6191jixbqyovpRunCBKexI5cfRPtWOitM3m7Mq26r7LpobMM+oOLUm4p0KKNIthWcmK9tYwXWSuGGfUQ+Y8gt7E0G06ZGbCPHOrxJ8lYQqXsif04piONPA/c9Hq43O99KPNGShONCS9oPFdOLRT3U= ostree-image-test"
+user --name=admin --groups=wheel --iscrypted --password=${SSH_PASSWORD}
+sshkey --username=admin "ssh-rsa ${SSH_KEY} ostree-image-test"
 bootloader --timeout=1 --append="net.ifnames=0 modprobe.blacklist=vc4"
 network --bootproto=dhcp --device=link --activate --onboot=on
 zerombr
@@ -207,7 +208,7 @@ sudo cp output/bootiso/install.iso /var/lib/libvirt/images/
 sudo restorecon -Rv /var/lib/libvirt/images/
 sudo virt-install  --name="${VM_NAME}" \
                 --disk path=/var/lib/libvirt/images/fdo-iso.qcow2,format=qcow2 \
-                --ram 3072 \
+                --ram 4096 \
                 --vcpus 2 \
                 --network network=integration,mac=34:49:22:B0:83:30 \
                 --os-type linux \
@@ -260,3 +261,4 @@ podman run --network=host --annotation run.oci.keep_original_groups=1 -v "$(pwd)
 check_result
 
 exit 0
+

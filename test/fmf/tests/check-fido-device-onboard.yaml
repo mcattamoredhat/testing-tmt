@@ -44,7 +44,7 @@
       when:
         - fdo_credential == "true"
 
-    - name: make sure secure device onboarding has been done successfully
+    - name: check secure device onboarding successful
       block:
         - assert:
             that:
