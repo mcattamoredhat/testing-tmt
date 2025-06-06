@@ -59,5 +59,5 @@
            tf_scope: private
            variables: "ARCH=x86_64"
            timeout: 90
-           secrets: "QUAY_USERNAME=${{ secrets.QUAY_USERNAME }};QUAY_PASSWORD=${{ secrets.QUAY_PASSWORD }};STAGE_REDHAT_IO_USERNAME=${{ secrets.STAGE_REDHAT_IO_USERNAME }};STAGE_REDHAT_IO_TOKEN=${{ secrets.STAGE_REDHAT_IO_TOKEN }};DOWNLOAD_NODE=${{ secrets.DOWNLOAD_NODE }};REDHAT_IO_USERNAME=${{ secrets.REDHAT_IO_USERNAME }};REDHAT_IO_TOKEN=${{ secrets.REDHAT_IO_TOKEN }}"
+           secrets: "QUAY_USERNAME=${{ secrets.QUAY_USERNAME }};QUAY_PASSWORD=${{ secrets.QUAY_PASSWORD }};STAGE_REDHAT_IO_USERNAME=${{ secrets.STAGE_REDHAT_IO_USERNAME }};STAGE_REDHAT_IO_TOKEN=${{ secrets.STAGE_REDHAT_IO_TOKEN }};DOWNLOAD_NODE=${{ secrets.DOWNLOAD_NODE }};REDHAT_IO_USERNAME=${{ secrets.REDHAT_IO_USERNAME }};REDHAT_IO_TOKEN=${{ secrets.REDHAT_IO_TOKEN }};SSH_KEY=${{ secrets.SSH_KEY }};SSH_PASSWORD=${{ secrets.SSH_PASSWORD }}"
 
